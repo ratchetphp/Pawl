@@ -1,0 +1,17 @@
+{
+    "name": "ratchet/pawl"
+  , "description": "Asynchronous WebSocket client"
+  , "keywords": ["WebSocket", "client", "Ratchet", "async"]
+  , "license": "MIT"
+  , "autoload": {
+        "psr-4": {
+            "Ratchet\\Client\\": "src"
+        }
+    }
+  , "require": {
+        "php": ">=5.4"
+      , "cboden/ratchet": "0.3.*"
+      , "react/socket-client": "0.4.*"
+    }
+
+}
