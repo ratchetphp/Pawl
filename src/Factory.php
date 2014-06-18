@@ -117,6 +117,10 @@ class Factory {
         }
 
         // do protocol headers
+        if (count($subProtocols) > 0) {
+            $protocols = implode(',', $subProtocols);
+            if ($protocols != "") $request->setHeader('Sec-WebSocket-Protocol', $protocols);
+        }
 
         return $request;
     }
