@@ -101,7 +101,7 @@ class Factory {
 
         $scheme = strtolower($request->getScheme());
         if (!in_array($scheme, ['ws', 'wss'])) {
-            throw new \InvalidArgumentsException(sprintf('Cannot connect to invalid URL (%s)', $url));
+            throw new \InvalidArgumentException(sprintf('Cannot connect to invalid URL (%s)', $url));
         }
 
         $request->setScheme('HTTP');
