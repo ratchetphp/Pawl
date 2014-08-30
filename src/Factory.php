@@ -45,11 +45,11 @@ class Factory {
         }
         $connector = 'wss' === substr($url, 0, 3) ? $this->_secureConnector : $this->_connector;
 
-        return $connector->create($request->getHost(), $request->getPort())->then(function(Stream $stream) use ($request) {
+        return $connector->create($request->getHost(), $request->getPort())->then(function(Stream $stream) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
 
             $buffer = '';
-            $headerParser = function($data, Stream $stream) use (&$headerParser, &$buffer, $futureWsConn, $request) {
+            $headerParser = function($data, Stream $stream) use (&$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
                 $buffer .= $data;
                 if (false == strpos($buffer, "\r\n\r\n")) {
                     return;
@@ -74,7 +74,13 @@ class Factory {
                     return;
                 }
 
-                // verify sub-protocol headers if any
+                $acceptedProtocol = $response->getHeader('Sec-WebSocket-Protocol');
+                if ((count($subProtocols) > 0 || null !== $acceptedProtocol) && !in_array((string)$acceptedProtocol, $subProtocols)) {
+                    $futureWsConn->reject(new \DomainException('Server did not respond with an expected Sec-WebSocket-Protocol'));
+                    $stream->close();
+                    
+                    return;
+                }
 
                 $futureWsConn->resolve(new WebSocket($stream, $response, $request));
 
