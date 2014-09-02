@@ -97,6 +97,14 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
 
         $this->_frame->addBuffer($data);
 
+        $ping = false;
+        if (Frame::OP_PING === $this->_frame->getOpcode()) {
+            $frame = new Frame($this->_frame->getPayload(), true, Frame::OP_PONG);
+            $frame->maskPayload($frame->generateMaskingKey());
+            $this->_stream->write($frame->getContents());
+            $ping = true;
+        }
+
         if ($this->_frame->isCoalesced()) {
             $opcode = $this->_frame->getOpcode();
 
@@ -146,7 +154,9 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
 
         $this->_frame = $this->_message = null;
 
-        $this->emit('message', [$message, $this]);
+        if (!$ping)
+            $this->emit('message', [$message, $this]);
+
 
         $this->handleData($overflow);
     }
