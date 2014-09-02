@@ -45,23 +45,23 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
         $this->request  = $request;
 
         $stream->on('data', function($data) {
-            $this->handleData($data);
-        });
+                $this->handleData($data);
+            });
 
         $stream->on('end', function(Stream $stream) {
-            if (is_resource($stream->stream)) {
-                stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
-                stream_set_blocking($stream->stream, false);
-            }
-        });
+                if (is_resource($stream->stream)) {
+                    stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
+                    stream_set_blocking($stream->stream, false);
+                }
+            });
 
         $stream->on('close', function() {
-            $this->emit('close', [$this]);
-        });
+                $this->emit('close', [$this]);
+            });
 
         $stream->on('error', function($error) {
-            $this->emit('error', [$error, $this]);
-        });
+                $this->emit('error', [$error, $this]);
+            });
     }
 
     public function send($msg) {
@@ -91,39 +91,41 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
             $this->_message = new Message;
         }
         if (!$this->_frame) {
-            $this->_frame = new Frame;
-            $this->_message->addFrame($this->_frame);
+            $frame = new Frame();
+        } else {
+            $frame = $this->_frame;
         }
 
-        $this->_frame->addBuffer($data);
+        $frame->addBuffer($data);
 
-        if ($this->_frame->isCoalesced()) {
-            $opcode = $this->_frame->getOpcode();
+        if ($frame->isCoalesced()) {
+            $opcode = $frame->getOpcode();
 
             if ($opcode > 2) {
-                if ($this->_frame->getPayloadLength() > 125 || !$this->_frame->isFinal()) {
+                if ($frame->getPayloadLength() > 125 || !$frame->isFinal()) {
                     $this->close(Frame::CLOSE_PROTOCOL);
                     return;
                 }
 
                 switch ($opcode) {
                     case Frame::OP_CLOSE:
-                        $this->close($this->_frame->getPayload());
+                        $this->close($frame->getPayload());
 
                         return;
                     case Frame::OP_PING:
-                        $this->send(new Frame($this->_frame->getPayload(), true, Frame::OP_PONG));
+                        $this->send(new Frame($frame->getPayload(), true, Frame::OP_PONG));
                         break;
                     case Frame::OP_PONG:
-                        $this->emit('pong', [$this->_frame, $this]);
+                        $this->emit('pong', [$frame, $this]);
                         break;
                     default:
-                        $this->close($this->_frame->getPayload());
+                        $this->close($frame->getPayload());
                         return;
                 }
             }
 
-            $overflow = $this->_frame->extractOverflow();
+            $overflow = $frame->extractOverflow();
+
             $this->_frame = null;
 
             // if this is a control frame, then we aren't going to be coalescing
@@ -131,7 +133,11 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
             if ($opcode > 2) {
                 $this->handleData($overflow);
                 return;
+            } else {
+                $this->_message->addFrame($frame);
             }
+        } else {
+            $this->_frame = $frame;
         }
 
         if (!$this->_message->isCoalesced()) {
