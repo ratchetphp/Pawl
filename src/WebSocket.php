@@ -45,23 +45,23 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
         $this->request  = $request;
 
         $stream->on('data', function($data) {
-                $this->handleData($data);
-            });
+            $this->handleData($data);
+        });
 
         $stream->on('end', function(Stream $stream) {
-                if (is_resource($stream->stream)) {
-                    stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
-                    stream_set_blocking($stream->stream, false);
-                }
-            });
+            if (is_resource($stream->stream)) {
+                stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
+                stream_set_blocking($stream->stream, false);
+            }
+        });
 
         $stream->on('close', function() {
-                $this->emit('close', [$this]);
-            });
+            $this->emit('close', [$this]);
+        });
 
         $stream->on('error', function($error) {
-                $this->emit('error', [$error, $this]);
-            });
+            $this->emit('error', [$error, $this]);
+        });
     }
 
     public function send($msg) {
