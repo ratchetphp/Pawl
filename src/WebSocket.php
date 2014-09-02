@@ -65,7 +65,11 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
     }
 
     public function send($msg) {
-        $frame = new Frame($msg);
+        if ($msg instanceof Frame) {
+            $frame = $msg;
+        } else {
+            $frame = new Frame($msg);
+        }
         $frame->maskPayload($frame->generateMaskingKey());
 
         $this->_stream->write($frame->getContents());
@@ -94,14 +98,40 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
         $this->_frame->addBuffer($data);
 
         if ($this->_frame->isCoalesced()) {
-            if (Frame::OP_CLOSE === $this->_frame->getOpcode()) {
-                $this->close($this->_frame->getPayload());
+            $opcode = $this->_frame->getOpcode();
 
-                return;
+            if ($opcode > 2) {
+                if ($this->_frame->getPayloadLength() > 125 || !$this->_frame->isFinal()) {
+                    $this->close(Frame::CLOSE_PROTOCOL);
+                    return;
+                }
+
+                switch ($opcode) {
+                    case Frame::OP_CLOSE:
+                        $this->close($this->_frame->getPayload());
+
+                        return;
+                    case Frame::OP_PING:
+                        $this->send(new Frame($this->_frame->getPayload(), true, Frame::OP_PONG));
+                        break;
+                    case Frame::OP_PONG:
+                        $this->emit('pong', [$this->_frame, $this]);
+                        break;
+                    default:
+                        $this->close($this->_frame->getPayload());
+                        return;
+                }
             }
 
             $overflow = $this->_frame->extractOverflow();
             $this->_frame = null;
+
+            // if this is a control frame, then we aren't going to be coalescing
+            // any message, just handle overflowing stuff now and return
+            if ($opcode > 2) {
+                $this->handleData($overflow);
+                return;
+            }
         }
 
         if (!$this->_message->isCoalesced()) {

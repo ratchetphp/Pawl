@@ -84,12 +84,9 @@ class Factory {
 
                 $futureWsConn->resolve(new WebSocket($stream, $response, $request));
 
-                $extraBody = trim($response->getBody());
-                if (strlen($extraBody) > 0) {
-                    $futureWsConn->promise()->then(function(WebSocket $conn) use ($stream, $extraBody) {
-                        $stream->emit('data', [$extraBody, $stream]);
-                    });
-                }
+                $futureWsConn->promise()->then(function(WebSocket $conn) use ($stream) {
+                    $stream->emit('data', [$conn->response->getBody(), $stream]);
+                });
             };
 
             $stream->on('data', $headerParser);
