@@ -104,11 +104,11 @@ class Factory
 
                 $futureWsConn->resolve(new WebSocket($stream, $response, $request));
 
-				$futureWsConn->promise()->then(
-					function(WebSocket $conn) use ($stream) {
-                    	$stream->emit('data', [$conn->response->getBody(), $stream]);
-                	}
-				);
+                $futureWsConn->promise()->then(
+                    function(WebSocket $conn) use ($stream) {
+                        $stream->emit('data', [$conn->response->getBody(), $stream]);
+                    }
+                );
             };
 
             $stream->on('data', $headerParser);
@@ -118,8 +118,15 @@ class Factory
         });
     }
 
-	protected function generateRequest($url, array $subProtocols, array $headers)
-	{
+    /**
+     * @param string $url
+     * @param array  $subProtocols
+     * @param array  $headers
+     *
+     * @return Request
+     */
+    protected function generateRequest($url, array $subProtocols, array $headers)
+    {
         $headers = array_merge($this->defaultHeaders, $headers);
         $headers['Sec-WebSocket-Key'] = $this->generateKey();
 
@@ -147,19 +154,22 @@ class Factory
         if (count($subProtocols) > 0) {
             $protocols = implode(',', $subProtocols);
 
-			if ($protocols !== '') {
-				$request->setHeader('Sec-WebSocket-Protocol', $protocols);
-			}
+            if ($protocols !== '') {
+                $request->setHeader('Sec-WebSocket-Protocol', $protocols);
+            }
         }
 
         return $request;
     }
 
+    /**
+     * @return string
+     */
 	protected function generateKey()
 	{
-        $chars     = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwzyz1234567890+/=';
+        $chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwzyz1234567890+/=';
         $charRange = strlen($chars) - 1;
-        $key       = '';
+        $key = '';
 
         for ($i = 0;$i < 16;$i++) {
             $key .= $chars[mt_rand(0, $charRange)];
