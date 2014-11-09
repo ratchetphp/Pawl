@@ -48,7 +48,7 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
             $this->handleData($data);
         });
 
-        $stream->on('end', function(Stream $stream) {
+        $stream->on('end', function(DuplexStreamInterface $stream) {
             if (is_resource($stream->stream)) {
                 stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
                 stream_set_blocking($stream->stream, false);
