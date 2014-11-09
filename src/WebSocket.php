@@ -3,7 +3,7 @@ namespace Ratchet\Client;
 use Evenement\EventEmitterTrait;
 use Evenement\EventEmitterInterface;
 use Ratchet\ConnectionInterface;
-use React\Stream\Stream;
+use React\Stream\DuplexStreamInterface;
 use Guzzle\Http\Message\Request;
 use Guzzle\Http\Message\Response;
 use Ratchet\WebSocket\Version\RFC6455\Message;
@@ -39,7 +39,7 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
      */
     private $_frame;
 
-    public function __construct(Stream $stream, Response $response, Request $request) {
+    public function __construct(DuplexStreamInterface $stream, Response $response, Request $request) {
         $this->_stream  = $stream;
         $this->response = $response;
         $this->request  = $request;

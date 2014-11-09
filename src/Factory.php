@@ -1,7 +1,7 @@
 <?php
 namespace Ratchet\Client;
 use React\EventLoop\LoopInterface;
-use React\Stream\Stream;
+use React\Stream\DuplexStreamInterface;
 use React\SocketClient\Connector;
 use React\SocketClient\SecureConnector;
 use React\Dns\Resolver\Resolver;
@@ -45,11 +45,11 @@ class Factory {
         }
         $connector = 'wss' === substr($url, 0, 3) ? $this->_secureConnector : $this->_connector;
 
-        return $connector->create($request->getHost(), $request->getPort())->then(function(Stream $stream) use ($request, $subProtocols) {
+        return $connector->create($request->getHost(), $request->getPort())->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
 
             $buffer = '';
-            $headerParser = function($data, Stream $stream) use (&$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
+            $headerParser = function($data, DuplexStreamInterface $stream) use (&$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
                 $buffer .= $data;
                 if (false == strpos($buffer, "\r\n\r\n")) {
                     return;
