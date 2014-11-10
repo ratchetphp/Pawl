@@ -1,5 +1,7 @@
 <?php
+
 namespace Ratchet\Client;
+
 use Evenement\EventEmitterTrait;
 use Evenement\EventEmitterInterface;
 use Ratchet\ConnectionInterface;
@@ -9,80 +11,100 @@ use Guzzle\Http\Message\Response;
 use Ratchet\WebSocket\Version\RFC6455\Message;
 use Ratchet\WebSocket\Version\RFC6455\Frame;
 
-class WebSocket implements EventEmitterInterface, ConnectionInterface {
+class WebSocket implements EventEmitterInterface, ConnectionInterface
+{
     use EventEmitterTrait;
 
     /**
      * The request headers sent to establish the connection
-     * @var \Guzzle\Http\Message\Request
+     *
+     * @var Request
      */
     public $request;
 
     /**
      * The response headers received from the server to establish the connection
-     * @var \Guzzle\Http\Message\Response
+     *
+     * @var Response
      */
     public $response;
 
     /**
-     * @var \React\Stream\Stream
+     * @var DuplexStreamInterface
      */
     protected $_stream;
 
     /**
-     * @var Ratchet\WebSocket\Version\RFC6455\Message
+     * @var Message
      */
     private $_message;
 
     /**
-     * @var Ratchet\WebSocket\Version\RFC6455\Frame
+     * @var Frame
      */
     private $_frame;
 
-    public function __construct(DuplexStreamInterface $stream, Response $response, Request $request) {
-        $this->_stream  = $stream;
+    public function __construct(DuplexStreamInterface $stream, Response $response, Request $request)
+    {
+        $this->_stream = $stream;
         $this->response = $response;
-        $this->request  = $request;
+        $this->request = $request;
 
-        $stream->on('data', function($data) {
-            $this->handleData($data);
-        });
-
-        $stream->on('end', function(DuplexStreamInterface $stream) {
-            if (is_resource($stream->stream)) {
-                stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
-                stream_set_blocking($stream->stream, false);
+        $stream->on(
+            'data',
+            function($data) {
+                $this->handleData($data);
             }
-        });
+        );
 
-        $stream->on('close', function() {
-            $this->emit('close', [$this]);
-        });
+        $stream->on(
+            'end',
+            function(DuplexStreamInterface $stream) {
+                if (is_resource($stream->stream)) {
+                    stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
+                    stream_set_blocking($stream->stream, false);
+                }
+            }
+        );
 
-        $stream->on('error', function($error) {
-            $this->emit('error', [$error, $this]);
-        });
+        $stream->on(
+            'close',
+            function() {
+                $this->emit('close', [$this]);
+            }
+        );
+
+        $stream->on(
+            'error',
+            function($error) {
+                $this->emit('error', [$error, $this]);
+            }
+        );
     }
 
-    public function send($msg) {
+    public function send($msg)
+    {
         if ($msg instanceof Frame) {
             $frame = $msg;
         } else {
             $frame = new Frame($msg);
         }
+
         $frame->maskPayload($frame->generateMaskingKey());
 
         $this->_stream->write($frame->getContents());
     }
 
-    public function close($code = 1000) {
+    public function close($code = 1000)
+    {
         $frame = new Frame(pack('n', $code), true, Frame::OP_CLOSE);
 
         $this->_stream->write($frame->getContents());
         $this->_stream->end();
     }
 
-    private function handleData($data) {
+    private function handleData($data)
+    {
         if (0 === strlen($data)) {
             return;
         }
@@ -90,6 +112,7 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
         if (!$this->_message) {
             $this->_message = new Message;
         }
+
         if (!$this->_frame) {
             $frame = new Frame();
         } else {
@@ -110,7 +133,6 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
                 switch ($opcode) {
                     case Frame::OP_CLOSE:
                         $this->close($frame->getPayload());
-
                         return;
                     case Frame::OP_PING:
                         $this->send(new Frame($frame->getPayload(), true, Frame::OP_PONG));
@@ -132,6 +154,7 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
             // any message, just handle overflowing stuff now and return
             if ($opcode > 2) {
                 $this->handleData($overflow);
+
                 return;
             } else {
                 $this->_message->addFrame($frame);
@@ -148,7 +171,7 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
             return;
         }
 
-        $message  = $this->_message->getPayload();
+        $message = $this->_message->getPayload();
 
         $this->_frame = $this->_message = null;
 
