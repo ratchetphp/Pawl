@@ -30,12 +30,12 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
     protected $_stream;
 
     /**
-     * @var Ratchet\WebSocket\Version\RFC6455\Message
+     * @var \Ratchet\WebSocket\Version\RFC6455\Message
      */
     private $_message;
 
     /**
-     * @var Ratchet\WebSocket\Version\RFC6455\Frame
+     * @var \Ratchet\WebSocket\Version\RFC6455\Frame
      */
     private $_frame;
 
