@@ -2,25 +2,28 @@
 namespace Ratchet\Client;
 use Evenement\EventEmitterTrait;
 use Evenement\EventEmitterInterface;
-use Ratchet\ConnectionInterface;
 use React\Stream\DuplexStreamInterface;
-use Guzzle\Http\Message\Request;
-use Guzzle\Http\Message\Response;
-use Ratchet\WebSocket\Version\RFC6455\Message;
-use Ratchet\WebSocket\Version\RFC6455\Frame;
+use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
+use Ratchet\RFC6455\Messaging\Streaming\MessageStreamer;
+use Ratchet\RFC6455\Encoding\Validator;
+use Ratchet\RFC6455\Messaging\Protocol\CloseFrameChecker;
+use Ratchet\RFC6455\Messaging\Protocol\MessageInterface;
+use Ratchet\RFC6455\Messaging\Protocol\FrameInterface;
+use Ratchet\RFC6455\Messaging\Protocol\Frame;
 
-class WebSocket implements EventEmitterInterface, ConnectionInterface {
+class WebSocket implements EventEmitterInterface {
     use EventEmitterTrait;
 
     /**
      * The request headers sent to establish the connection
-     * @var \Guzzle\Http\Message\Request
+     * @var \Psr\Http\Message\RequestInterface
      */
     public $request;
 
     /**
      * The response headers received from the server to establish the connection
-     * @var \Guzzle\Http\Message\Response
+     * @var \Psr\Http\Message\ResponseInterface
      */
     public $response;
 
@@ -30,23 +33,52 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
     protected $_stream;
 
     /**
-     * @var Ratchet\WebSocket\Version\RFC6455\Message
+     * WebSocket constructor.
+     * @param \React\Stream\DuplexStreamInterface $stream
+     * @param \Psr\Http\Message\ResponseInterface $response
+     * @param \Psr\Http\Message\RequestInterface  $request
+     * @event message
+     * @event end
+     * @event close
+     * @event error
      */
-    private $_message;
-
-    /**
-     * @var Ratchet\WebSocket\Version\RFC6455\Frame
-     */
-    private $_frame;
-
-    public function __construct(DuplexStreamInterface $stream, Response $response, Request $request) {
+    public function __construct(DuplexStreamInterface $stream, ResponseInterface $response, RequestInterface $request) {
         $this->_stream  = $stream;
         $this->response = $response;
         $this->request  = $request;
 
-        $stream->on('data', function($data) {
-            $this->handleData($data);
-        });
+        $reusableUAException = new \UnderflowException;
+
+        $streamer = new MessageStreamer(
+            new Validator,
+            new CloseFrameChecker,
+            function(MessageInterface $msg) {
+                $this->emit('message', [$msg, $this]);
+            },
+            function(FrameInterface $frame) use (&$streamer) {
+                switch ($frame->getOpcode()) {
+                    case Frame::OP_CLOSE:
+                        $this->close($frame->getPayload());
+
+                        return;
+                    case Frame::OP_PING:
+                        $this->send(new $streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
+                        break;
+                    case Frame::OP_PONG:
+                        $this->emit('pong', [$frame, $this]);
+                        break;
+                    default:
+                        $this->close($frame->getPayload());
+                        return;
+                }
+            },
+            false,
+            function() use ($reusableUAException) {
+                return $reusableUAException;
+            }
+        );
+
+        $stream->on('data', [$streamer, 'onData']);
 
         $stream->on('end', function(DuplexStreamInterface $stream) {
             if (is_resource($stream->stream)) {
@@ -80,80 +112,5 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
 
         $this->_stream->write($frame->getContents());
         $this->_stream->end();
-    }
-
-    private function handleData($data) {
-        if (0 === strlen($data)) {
-            return;
-        }
-
-        if (!$this->_message) {
-            $this->_message = new Message;
-        }
-        if (!$this->_frame) {
-            $frame = new Frame();
-        } else {
-            $frame = $this->_frame;
-        }
-
-        $frame->addBuffer($data);
-
-        if ($frame->isCoalesced()) {
-            $opcode = $frame->getOpcode();
-
-            if ($opcode > 2) {
-                if ($frame->getPayloadLength() > 125 || !$frame->isFinal()) {
-                    $this->close(Frame::CLOSE_PROTOCOL);
-                    return;
-                }
-
-                switch ($opcode) {
-                    case Frame::OP_CLOSE:
-                        $this->close($frame->getPayload());
-
-                        return;
-                    case Frame::OP_PING:
-                        $this->send(new Frame($frame->getPayload(), true, Frame::OP_PONG));
-                        break;
-                    case Frame::OP_PONG:
-                        $this->emit('pong', [$frame, $this]);
-                        break;
-                    default:
-                        $this->close($frame->getPayload());
-                        return;
-                }
-            }
-
-            $overflow = $frame->extractOverflow();
-
-            $this->_frame = null;
-
-            // if this is a control frame, then we aren't going to be coalescing
-            // any message, just handle overflowing stuff now and return
-            if ($opcode > 2) {
-                $this->handleData($overflow);
-                return;
-            } else {
-                $this->_message->addFrame($frame);
-            }
-        } else {
-            $this->_frame = $frame;
-        }
-
-        if (!$this->_message->isCoalesced()) {
-            if (isset($overflow)) {
-                $this->handleData($overflow);
-            }
-
-            return;
-        }
-
-        $message  = $this->_message->getPayload();
-
-        $this->_frame = $this->_message = null;
-
-        $this->emit('message', [$message, $this]);
-
-        $this->handleData($overflow);
     }
 }
