@@ -1,5 +1,6 @@
 <?php
 namespace Ratchet\Client;
+use Ratchet\RFC6455\Handshake\ClientNegotiator;
 use React\EventLoop\LoopInterface;
 use React\Stream\DuplexStreamInterface;
 use React\SocketClient\Connector;
@@ -9,21 +10,12 @@ use React\Dns\Resolver\Factory as DnsFactory;
 use React\Promise\Deferred;
 use React\Promise\RejectedPromise;
 use GuzzleHttp\Psr7 as gPsr;
-use Ratchet\RFC6455\Handshake\NegotiatorInterface;
 
 class Factory {
     protected $_loop;
     protected $_connector;
     protected $_secureConnector;
-
-    public $defaultHeaders = [
-        'Connection'            => 'Upgrade'
-      , 'Cache-Control'         => 'no-cache'
-      , 'Pragma'                => 'no-cache'
-      , 'Upgrade'               => 'websocket'
-      , 'Sec-WebSocket-Version' => 13
-      , 'User-Agent'            => "Ratchet->Pawl/0.0.2"
-    ];
+    protected $_negotiator;
 
     public function __construct(LoopInterface $loop, Resolver $resolver = null) {
         if (null === $resolver) {
@@ -34,6 +26,7 @@ class Factory {
         $this->_loop            = $loop;
         $this->_connector       = new Connector($loop, $resolver);
         $this->_secureConnector = new SecureConnector($this->_connector, $loop);
+        $this->_negotiator      = new ClientNegotiator;
     }
 
     public function __invoke($url, array $subProtocols = [], array $headers = []) {
@@ -45,7 +38,9 @@ class Factory {
         }
         $connector = 'wss' === substr($url, 0, 3) ? $this->_secureConnector : $this->_connector;
 
-        return $connector->create($uri->getHost(), $uri->getPort())->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
+        $port = $uri->getPort() ?: 80;
+
+        return $connector->create($uri->getHost(), $port)->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
 
             $buffer = '';
@@ -59,16 +54,8 @@ class Factory {
 
                 $response = gPsr\parse_response($buffer);
 
-                if (101 !== $response->getStatusCode()) {
-                    $futureWsConn->reject($response);
-                    $stream->close();
-
-                    return;
-                }
-
-                $acceptCheck = base64_encode(pack('H*', sha1($request->getHeader('Sec-WebSocket-Key')[0] . NegotiatorInterface::GUID)));
-                if ((string)$response->getHeader('Sec-WebSocket-Accept')[0] !== $acceptCheck) {
-                    $futureWsConn->reject(new \DomainException("Could not verify Accept Key during WebSocket handshake"));
+                if (!$this->_negotiator->validateResponse($request, $response)) {
+                    $futureWsConn->reject(new \DomainException(gPsr\str($response)));
                     $stream->close();
 
                     return;
@@ -97,11 +84,7 @@ class Factory {
     }
 
     protected function generateRequest($url, array $subProtocols, array $headers) {
-        $headers = array_merge($this->defaultHeaders, $headers);
-        $headers['Sec-WebSocket-Key'] = $this->generateKey();
-
-        $request = new gPsr\Request('GET', $url, $headers);
-        $uri = $request->getUri();
+        $uri = gPsr\uri_for($url);
 
         $scheme = $uri->getScheme();
 
@@ -112,16 +95,17 @@ class Factory {
         $uri = $uri->withScheme('HTTP');
 
         if (!$uri->getPort()) {
-            $uri = $uri->withtPort('wss' === $scheme ? 443 : 80);
-        } else {
-            $request = $request->withHeader('Host', $request->getHeader('Host')[0] . ":{$uri->getPort()}");
+            $uri = $uri->withPort('wss' === $scheme ? 443 : 80);
         }
+
+        $request = array_reduce(array_keys($headers), function($request, $header) use ($headers) {
+            return $request->withHeader($header, $headers[$header]);
+        }, $this->_negotiator->generateRequest($uri));
 
         if (!$request->getHeader('Origin')) {
             $request = $request->withHeader('Origin', str_replace('ws', 'http', $scheme) . '://' . $uri->getHost());
         }
 
-        // do protocol headers
         if (count($subProtocols) > 0) {
             $protocols = implode(',', $subProtocols);
             if ($protocols != "") {

@@ -5,12 +5,11 @@ use Evenement\EventEmitterInterface;
 use React\Stream\DuplexStreamInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Ratchet\RFC6455\Messaging\Streaming\MessageStreamer;
-use Ratchet\RFC6455\Encoding\Validator;
-use Ratchet\RFC6455\Messaging\Protocol\CloseFrameChecker;
-use Ratchet\RFC6455\Messaging\Protocol\MessageInterface;
-use Ratchet\RFC6455\Messaging\Protocol\FrameInterface;
-use Ratchet\RFC6455\Messaging\Protocol\Frame;
+use Ratchet\RFC6455\Messaging\MessageBuffer;
+use Ratchet\RFC6455\Messaging\CloseFrameChecker;
+use Ratchet\RFC6455\Messaging\MessageInterface;
+use Ratchet\RFC6455\Messaging\FrameInterface;
+use Ratchet\RFC6455\Messaging\Frame;
 
 class WebSocket implements EventEmitterInterface {
     use EventEmitterTrait;
@@ -49,8 +48,7 @@ class WebSocket implements EventEmitterInterface {
 
         $reusableUAException = new \UnderflowException;
 
-        $streamer = new MessageStreamer(
-            new Validator,
+        $streamer = new MessageBuffer(
             new CloseFrameChecker,
             function(MessageInterface $msg) {
                 $this->emit('message', [$msg, $this]);
