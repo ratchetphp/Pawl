@@ -115,16 +115,4 @@ class Factory {
 
         return $request;
     }
-
-    protected function generateKey() {
-        $chars     = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwzyz1234567890+/=';
-        $charRange = strlen($chars) - 1;
-        $key       = '';
-
-        for ($i = 0;$i < 16;$i++) {
-            $key .= $chars[mt_rand(0, $charRange)];
-        }
-
-        return base64_encode($key);
-    }
 }
