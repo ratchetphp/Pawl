@@ -36,10 +36,12 @@ use React\Promise\Deferred;
 
             $i = 0;
 
-            $runNextCase = function($i) use (&$runNextCase, &$i, $numOfCases, $allCases, $connector, $loop) {
+            $runNextCase = function() use (&$runNextCase, &$i, $numOfCases, $allCases, $connector, $loop) {
                 $i++;
-                if ($i > $numOfCases) {
+
+                if ($i > (int)$numOfCases->getPayload()) {
                     $allCases->resolve();
+
                     return;
                 }
 
@@ -54,7 +56,7 @@ use React\Promise\Deferred;
                 });
             };
 
-            $runNextCase(1);
+            $runNextCase();
 
             return $allCases->promise();
         })->then(function() use ($connector, $loop) {

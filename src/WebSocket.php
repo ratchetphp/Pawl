@@ -56,18 +56,13 @@ class WebSocket implements EventEmitterInterface {
             function(FrameInterface $frame) use (&$streamer) {
                 switch ($frame->getOpcode()) {
                     case Frame::OP_CLOSE:
-                        $this->close($frame->getPayload());
-
-                        return;
+                        return $this->_stream->end($streamer->newFrame($frame->getPayload(), true, Frame::OP_CLOSE)->maskPayload()->getContents());
                     case Frame::OP_PING:
-                        $this->send(new $streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
-                        break;
+                        return $this->send($streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
                     case Frame::OP_PONG:
-                        $this->emit('pong', [$frame, $this]);
-                        break;
+                        return $this->emit('pong', [$frame, $this]);
                     default:
-                        $this->close($frame->getPayload());
-                        return;
+                        return $this->_stream->end($streamer->newFrame(Frame::CLOSE_PROTOCOL, true, Frame::OP_CLOSE)->maskPayload()->getContents());
                 }
             },
             false,
@@ -95,20 +90,17 @@ class WebSocket implements EventEmitterInterface {
     }
 
     public function send($msg) {
-        if ($msg instanceof Frame) {
-            $frame = $msg;
+        if ($msg instanceof MessageInterface) {
+            foreach ($msg as $frame) {
+                $frame->maskPayload();
+            }
         } else {
-            $frame = new Frame($msg);
+            if (!($msg instanceof Frame)) {
+                $msg = new Frame($msg);
+            }
+            $msg->maskPayload();
         }
-        $frame->maskPayload($frame->generateMaskingKey());
 
-        $this->_stream->write($frame->getContents());
-    }
-
-    public function close($code = 1000) {
-        $frame = new Frame(pack('n', $code), true, Frame::OP_CLOSE);
-
-        $this->_stream->write($frame->getContents());
-        $this->_stream->end();
+        $this->_stream->write($msg->getContents());
     }
 }
