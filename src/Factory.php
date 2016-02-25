@@ -62,7 +62,7 @@ class Factory {
                 }
 
                 $acceptedProtocol = $response->getHeader('Sec-WebSocket-Protocol');
-                if ((count($subProtocols) > 0) && 0 === count(array_intersect($subProtocols, $acceptedProtocol))) {
+                if ((count($subProtocols) > 0) && 1 !== count(array_intersect($subProtocols, $acceptedProtocol))) {
                     $futureWsConn->reject(new \DomainException('Server did not respond with an expected Sec-WebSocket-Protocol'));
                     $stream->close();
 
