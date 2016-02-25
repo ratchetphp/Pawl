@@ -11,7 +11,7 @@
   , "require": {
         "php": ">=5.4"
       , "react/socket-client": "0.4.*"
-      , "ratchet/rfc6455": "dev-psr7-multi-streamer"
+      , "ratchet/rfc6455": "0.2.*"
     }
 
 }
