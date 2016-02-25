@@ -103,4 +103,10 @@ class WebSocket implements EventEmitterInterface {
 
         $this->_stream->write($msg->getContents());
     }
+
+    public function close($code = 1000) {
+        $frame = new Frame(pack('n', $code), true, Frame::OP_CLOSE);
+        $this->_stream->write($frame->getContents());
+        $this->_stream->end();
+    }
 }
