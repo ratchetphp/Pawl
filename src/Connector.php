@@ -3,7 +3,7 @@ namespace Ratchet\Client;
 use Ratchet\RFC6455\Handshake\ClientNegotiator;
 use React\EventLoop\LoopInterface;
 use React\Stream\DuplexStreamInterface;
-use React\SocketClient\Connector;
+use React\SocketClient\Connector as SocketConnector;
 use React\SocketClient\SecureConnector;
 use React\Dns\Resolver\Resolver;
 use React\Dns\Resolver\Factory as DnsFactory;
@@ -11,7 +11,7 @@ use React\Promise\Deferred;
 use React\Promise\RejectedPromise;
 use GuzzleHttp\Psr7 as gPsr;
 
-class Factory {
+class Connector {
     protected $_loop;
     protected $_connector;
     protected $_secureConnector;
@@ -24,7 +24,7 @@ class Factory {
         }
 
         $this->_loop            = $loop;
-        $this->_connector       = new Connector($loop, $resolver);
+        $this->_connector       = new SocketConnector($loop, $resolver);
         $this->_secureConnector = new SecureConnector($this->_connector, $loop);
         $this->_negotiator      = new ClientNegotiator;
     }
@@ -97,6 +97,8 @@ class Factory {
         if (!$uri->getPort()) {
             $uri = $uri->withPort('wss' === $scheme ? 443 : 80);
         }
+
+        $headers += ['User-Agent' => 'Ratchet-Pawl/0.2'];
 
         $request = array_reduce(array_keys($headers), function($request, $header) use ($headers) {
             return $request->withHeader($header, $headers[$header]);

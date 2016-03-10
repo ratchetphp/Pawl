@@ -9,7 +9,7 @@ use React\Promise\Deferred;
     $loop = React\EventLoop\Factory::create();
 
     $connFactory = function() use ($loop) {
-        $connector = new Ratchet\Client\Factory($loop);
+        $connector = new Ratchet\Client\Connector($loop);
 
         return function($url) use ($connector) {
             return $connector('ws://127.0.0.1:9001' . $url);
