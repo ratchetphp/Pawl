@@ -44,6 +44,15 @@ class Connector {
         return $connector->create($uri->getHost(), $port)->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
 
+            $earlyClose = function() use ($futureWsConn) {
+                $futureWsConn->reject(new \RuntimeException('Connection closed before handshake'));
+            };
+
+            $stream->on('close', $earlyClose);
+            $futureWsConn->promise()->then(function() use ($stream, $earlyClose) {
+                $stream->removeListener('close', $earlyClose);
+            });
+
             $buffer = '';
             $headerParser = function($data, DuplexStreamInterface $stream) use (&$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
                 $buffer .= $data;
