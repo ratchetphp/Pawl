@@ -55,9 +55,9 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
             }
         });
 
-        $stream->on('close', function() {
-            $this->emit('close', [$this]);
-        });
+        // $stream->on('close', function() {
+        //     $this->emit('close', [$this]);
+        // });
 
         $stream->on('error', function($error) {
             $this->emit('error', [$error, $this]);
@@ -80,6 +80,8 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
 
         $this->_stream->write($frame->getContents());
         $this->_stream->end();
+
+        $this->emit('close', [$code, '', $this]);
     }
 
     private function handleData($data) {
@@ -111,6 +113,16 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
                     case Frame::OP_CLOSE:
                         $this->close($frame->getPayload());
 
+                        $opcode = unpack('n', $frame->getContents());
+                        $opcode = reset($opcode);
+                        $reason = '';
+
+                        if (strlen($frame->getContents()) > 2) {
+                            $reason = substr($frame->getContents(), 2, strlen($frame->getContents()));
+                        }
+
+                        $this->emit('close', [$opcode, $reason, $this]);
+
                         return;
                     case Frame::OP_PING:
                         $this->send(new Frame($frame->getPayload(), true, Frame::OP_PONG));
@@ -120,6 +132,17 @@ class WebSocket implements EventEmitterInterface, ConnectionInterface {
                         break;
                     default:
                         $this->close($frame->getPayload());
+                        
+                        $opcode = unpack('n', $frame->getContents());
+                        $opcode = reset($opcode);
+                        $reason = '';
+
+                        if (strlen($frame->getContents()) > 2) {
+                            $reason = substr($frame->getContents(), 2, strlen($frame->getContents()));
+                        }
+
+                        $this->emit('close', [$opcode, $reason, $this]);
+
                         return;
                 }
             }
