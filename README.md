@@ -1,6 +1,6 @@
 #Pawl
 
-An asynchronous PHP WebSocket client. (early alpha)
+An asynchronous PHP WebSocket client
 
 ---
 
