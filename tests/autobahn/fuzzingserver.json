@@ -5,6 +5,6 @@
     }
   , "outdir": "reports/ab"
   , "cases": ["*"]
-  , "exclude-cases": ["9.8.6"]
+  , "exclude-cases": []
   , "exclude-agent-cases": {}
 }
