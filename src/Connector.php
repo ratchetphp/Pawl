@@ -3,8 +3,7 @@ namespace Ratchet\Client;
 use Ratchet\RFC6455\Handshake\ClientNegotiator;
 use React\EventLoop\LoopInterface;
 use React\Stream\DuplexStreamInterface;
-use React\SocketClient\TcpConnector;
-use React\SocketClient\DnsConnector;
+use React\SocketClient\Connector as SocketConnector;
 use React\SocketClient\SecureConnector;
 use React\Dns\Resolver\Resolver;
 use React\Dns\Resolver\Factory as DnsFactory;
@@ -25,7 +24,7 @@ class Connector {
         }
 
         $this->_loop            = $loop;
-        $this->_connector       = new DnsConnector(new TcpConnector($loop), $resolver);
+        $this->_connector       = new SocketConnector($loop, $resolver);
         $this->_secureConnector = new SecureConnector($this->_connector, $loop);
         $this->_negotiator      = new ClientNegotiator;
     }
