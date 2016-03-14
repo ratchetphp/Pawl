@@ -1,30 +1,21 @@
 <?php
 namespace Ratchet\Client;
+use Ratchet\RFC6455\Handshake\ClientNegotiator;
 use React\EventLoop\LoopInterface;
 use React\Stream\DuplexStreamInterface;
-use React\SocketClient\Connector;
+use React\SocketClient\Connector as SocketConnector;
 use React\SocketClient\SecureConnector;
 use React\Dns\Resolver\Resolver;
 use React\Dns\Resolver\Factory as DnsFactory;
 use React\Promise\Deferred;
 use React\Promise\RejectedPromise;
-use Guzzle\Http\Message\Response;
-use Guzzle\Http\Message\Request;
-use Ratchet\WebSocket\Version\RFC6455;
+use GuzzleHttp\Psr7 as gPsr;
 
-class Factory {
+class Connector {
     protected $_loop;
     protected $_connector;
     protected $_secureConnector;
-
-    public $defaultHeaders = [
-        'Connection'            => 'Upgrade'
-      , 'Cache-Control'         => 'no-cache'
-      , 'Pragma'                => 'no-cache'
-      , 'Upgrade'               => 'websocket'
-      , 'Sec-WebSocket-Version' => 13
-      , 'User-Agent'            => "Ratchet->Pawl/0.0.1"
-    ];
+    protected $_negotiator;
 
     public function __construct(LoopInterface $loop, Resolver $resolver = null) {
         if (null === $resolver) {
@@ -33,20 +24,33 @@ class Factory {
         }
 
         $this->_loop            = $loop;
-        $this->_connector       = new Connector($loop, $resolver);
+        $this->_connector       = new SocketConnector($loop, $resolver);
         $this->_secureConnector = new SecureConnector($this->_connector, $loop);
+        $this->_negotiator      = new ClientNegotiator;
     }
 
     public function __invoke($url, array $subProtocols = [], array $headers = []) {
         try {
-            $request   = $this->generateRequest($url, $subProtocols, $headers);
+            $request = $this->generateRequest($url, $subProtocols, $headers);
+            $uri = $request->getUri();
         } catch (\Exception $e) {
             return new RejectedPromise($e);
         }
         $connector = 'wss' === substr($url, 0, 3) ? $this->_secureConnector : $this->_connector;
 
-        return $connector->create($request->getHost(), $request->getPort())->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
+        $port = $uri->getPort() ?: 80;
+
+        return $connector->create($uri->getHost(), $port)->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
+
+            $earlyClose = function() use ($futureWsConn) {
+                $futureWsConn->reject(new \RuntimeException('Connection closed before handshake'));
+            };
+
+            $stream->on('close', $earlyClose);
+            $futureWsConn->promise()->then(function() use ($stream, $earlyClose) {
+                $stream->removeListener('close', $earlyClose);
+            });
 
             $buffer = '';
             $headerParser = function($data, DuplexStreamInterface $stream) use (&$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
@@ -57,28 +61,20 @@ class Factory {
 
                 $stream->removeListener('data', $headerParser);
 
-                $response = Response::fromMessage($buffer);
+                $response = gPsr\parse_response($buffer);
 
-                if (101 !== $response->getStatusCode()) {
-                    $futureWsConn->reject($response);
-                    $stream->close();
-
-                    return;
-                }
-
-                $acceptCheck = base64_encode(pack('H*', sha1($request->getHeader('Sec-WebSocket-Key') . RFC6455::GUID)));
-                if ((string)$response->getHeader('Sec-WebSocket-Accept') !== $acceptCheck) {
-                    $futureWsConn->reject(new \DomainException("Could not verify Accept Key during WebSocket handshake"));
+                if (!$this->_negotiator->validateResponse($request, $response)) {
+                    $futureWsConn->reject(new \DomainException(gPsr\str($response)));
                     $stream->close();
 
                     return;
                 }
 
                 $acceptedProtocol = $response->getHeader('Sec-WebSocket-Protocol');
-                if ((count($subProtocols) > 0 || null !== $acceptedProtocol) && !in_array((string)$acceptedProtocol, $subProtocols)) {
+                if ((count($subProtocols) > 0) && 1 !== count(array_intersect($subProtocols, $acceptedProtocol))) {
                     $futureWsConn->reject(new \DomainException('Server did not respond with an expected Sec-WebSocket-Protocol'));
                     $stream->close();
-                    
+
                     return;
                 }
 
@@ -90,53 +86,44 @@ class Factory {
             };
 
             $stream->on('data', $headerParser);
-            $stream->write($request);
+            $stream->write(gPsr\str($request));
 
             return $futureWsConn->promise();
         });
     }
 
     protected function generateRequest($url, array $subProtocols, array $headers) {
-        $headers = array_merge($this->defaultHeaders, $headers);
-        $headers['Sec-WebSocket-Key'] = $this->generateKey();
+        $uri = gPsr\uri_for($url);
 
-        $request = new Request('GET', $url, $headers);
+        $scheme = $uri->getScheme();
 
-        $scheme = strtolower($request->getScheme());
         if (!in_array($scheme, ['ws', 'wss'])) {
             throw new \InvalidArgumentException(sprintf('Cannot connect to invalid URL (%s)', $url));
         }
 
-        $request->setScheme('HTTP');
+        $uri = $uri->withScheme('HTTP');
 
-        if (!$request->getPort()) {
-            $request->setPort('wss' === $scheme ? 443 : 80);
-        } else {
-            $request->setHeader('Host', $request->getHeader('Host') . ":{$request->getPort()}");
+        if (!$uri->getPort()) {
+            $uri = $uri->withPort('wss' === $scheme ? 443 : 80);
         }
+
+        $headers += ['User-Agent' => 'Ratchet-Pawl/0.2'];
+
+        $request = array_reduce(array_keys($headers), function($request, $header) use ($headers) {
+            return $request->withHeader($header, $headers[$header]);
+        }, $this->_negotiator->generateRequest($uri));
 
         if (!$request->getHeader('Origin')) {
-            $request->setHeader('Origin', str_replace('ws', 'http', $scheme) . '://' . $request->getHost());
+            $request = $request->withHeader('Origin', str_replace('ws', 'http', $scheme) . '://' . $uri->getHost());
         }
 
-        // do protocol headers
         if (count($subProtocols) > 0) {
             $protocols = implode(',', $subProtocols);
-            if ($protocols != "") $request->setHeader('Sec-WebSocket-Protocol', $protocols);
+            if ($protocols != "") {
+                $request = $request->withHeader('Sec-WebSocket-Protocol', $protocols);
+            }
         }
 
         return $request;
-    }
-
-    protected function generateKey() {
-        $chars     = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwzyz1234567890+/=';
-        $charRange = strlen($chars) - 1;
-        $key       = '';
-
-        for ($i = 0;$i < 16;$i++) {
-            $key .= $chars[mt_rand(0, $charRange)];
-        }
-
-        return base64_encode($key);
     }
 }

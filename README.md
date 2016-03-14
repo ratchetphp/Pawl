@@ -1,6 +1,6 @@
 #Pawl
 
-An asynchronous PHP WebSocket client. (early alpha)
+An asynchronous PHP WebSocket client
 
 ---
 
@@ -10,7 +10,7 @@ An asynchronous PHP WebSocket client. (early alpha)
     require __DIR__ . '/vendor/autoload.php';
 
     $loop = React\EventLoop\Factory::create();
-    $connector = new Ratchet\Client\Factory($loop);
+    $connector = new Ratchet\Client\Connector($loop);
 
     $connector('ws://127.0.0.1:8080')->then(function(Ratchet\Client\WebSocket $conn) {
         $conn->on('message', function($msg) {
