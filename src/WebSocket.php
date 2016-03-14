@@ -56,12 +56,32 @@ class WebSocket implements EventEmitterInterface {
             function(FrameInterface $frame) use (&$streamer) {
                 switch ($frame->getOpcode()) {
                     case Frame::OP_CLOSE:
+                        $reason = '';
+                        $code = unpack('n', $frame->getContents());
+                        $code = reset($code);
+
+                        if (($frameLen = strlen($frame->getContents())) > 2) { // has reason
+                            $reason = substr($frame->getContents(), 2, $frameLen);
+                        }
+
+                        $this->emit('close', [$code, $reason, $this]);
+
                         return $this->_stream->end($streamer->newFrame($frame->getPayload(), true, Frame::OP_CLOSE)->maskPayload()->getContents());
                     case Frame::OP_PING:
                         return $this->send($streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
                     case Frame::OP_PONG:
                         return $this->emit('pong', [$frame, $this]);
                     default:
+                        $reason = '';
+                        $code = unpack('n', $frame->getContents());
+                        $code = reset($code);
+
+                        if (($frameLen = strlen($frame->getContents())) > 2) { // has reason
+                            $reason = substr($frame->getContents(), 2, $frameLen);
+                        }
+
+                        $this->emit('close', [$code, $reason, $this]);
+                        
                         return $this->_stream->end($streamer->newFrame(Frame::CLOSE_PROTOCOL, true, Frame::OP_CLOSE)->maskPayload()->getContents());
                 }
             },
