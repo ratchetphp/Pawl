@@ -56,12 +56,14 @@ class WebSocket implements EventEmitterInterface {
             function(FrameInterface $frame) use (&$streamer) {
                 switch ($frame->getOpcode()) {
                     case Frame::OP_CLOSE:
+                        $frameContents = substr($frame->getContents(), 2, strlen($frame->getContents())); // for some reason, the contents have 2 extra bytes at the front
+
                         $reason = '';
-                        $code = unpack('n', $frame->getContents());
+                        $code = unpack('n', substr($frameContents, 0, 2));
                         $code = reset($code);
 
-                        if (($frameLen = strlen($frame->getContents())) > 2) { // has reason
-                            $reason = substr($frame->getContents(), 2, $frameLen);
+                        if (($frameLen = strlen($frameContents)) > 2) { // has reason
+                            $reason = substr($frameContents, 2, $frameLen);
                         }
 
                         $this->emit('close', [$code, $reason, $this]);
@@ -72,16 +74,6 @@ class WebSocket implements EventEmitterInterface {
                     case Frame::OP_PONG:
                         return $this->emit('pong', [$frame, $this]);
                     default:
-                        $reason = '';
-                        $code = unpack('n', $frame->getContents());
-                        $code = reset($code);
-
-                        if (($frameLen = strlen($frame->getContents())) > 2) { // has reason
-                            $reason = substr($frame->getContents(), 2, $frameLen);
-                        }
-
-                        $this->emit('close', [$code, $reason, $this]);
-                        
                         return $this->_stream->end($streamer->newFrame(Frame::CLOSE_PROTOCOL, true, Frame::OP_CLOSE)->maskPayload()->getContents());
                 }
             },
@@ -98,10 +90,6 @@ class WebSocket implements EventEmitterInterface {
                 stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
                 stream_set_blocking($stream->stream, false);
             }
-        });
-
-        $stream->on('close', function() {
-            $this->emit('close', [$this]);
         });
 
         $stream->on('error', function($error) {
