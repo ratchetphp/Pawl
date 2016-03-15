@@ -32,6 +32,11 @@ class WebSocket implements EventEmitterInterface {
     protected $_stream;
 
     /**
+     * @var \Closure
+     */
+    protected $_close;
+
+    /**
      * WebSocket constructor.
      * @param \React\Stream\DuplexStreamInterface $stream
      * @param \Psr\Http\Message\ResponseInterface $response
@@ -46,6 +51,18 @@ class WebSocket implements EventEmitterInterface {
         $this->response = $response;
         $this->request  = $request;
 
+        $self = $this;
+        $this->_close = function($code = null, $reason = null) use ($self) {
+            static $sent = false;
+
+            if ($sent) {
+                return;
+            }
+            $sent = true;
+
+            $self->emit('close', [$code, $reason, $self]);
+        };
+
         $reusableUAException = new \UnderflowException;
 
         $streamer = new MessageBuffer(
@@ -56,17 +73,18 @@ class WebSocket implements EventEmitterInterface {
             function(FrameInterface $frame) use (&$streamer) {
                 switch ($frame->getOpcode()) {
                     case Frame::OP_CLOSE:
-                        $frameContents = substr($frame->getContents(), 2, strlen($frame->getContents())); // for some reason, the contents have 2 extra bytes at the front
+                        $frameContents = $frame->getPayload();
 
                         $reason = '';
                         $code = unpack('n', substr($frameContents, 0, 2));
                         $code = reset($code);
 
-                        if (($frameLen = strlen($frameContents)) > 2) { // has reason
+                        if (($frameLen = strlen($frameContents)) > 2) {
                             $reason = substr($frameContents, 2, $frameLen);
                         }
 
-                        $this->emit('close', [$code, $reason, $this]);
+                        $closeFn = $this->_close;
+                        $closeFn($code, $reason);
 
                         return $this->_stream->end($streamer->newFrame($frame->getPayload(), true, Frame::OP_CLOSE)->maskPayload()->getContents());
                     case Frame::OP_PING:
@@ -74,7 +92,7 @@ class WebSocket implements EventEmitterInterface {
                     case Frame::OP_PONG:
                         return $this->emit('pong', [$frame, $this]);
                     default:
-                        return $this->_stream->end($streamer->newFrame(Frame::CLOSE_PROTOCOL, true, Frame::OP_CLOSE)->maskPayload()->getContents());
+                        return $this->close(Frame::CLOSE_PROTOCOL);
                 }
             },
             false,
@@ -91,6 +109,8 @@ class WebSocket implements EventEmitterInterface {
                 stream_set_blocking($stream->stream, false);
             }
         });
+
+        $stream->on('close', $this->_close);
 
         $stream->on('error', function($error) {
             $this->emit('error', [$error, $this]);
@@ -112,9 +132,13 @@ class WebSocket implements EventEmitterInterface {
         $this->_stream->write($msg->getContents());
     }
 
-    public function close($code = 1000) {
-        $frame = new Frame(pack('n', $code), true, Frame::OP_CLOSE);
+    public function close($code = 1000, $reason = '') {
+        $frame = new Frame(pack('n', $code) . $reason, true, Frame::OP_CLOSE);
         $this->_stream->write($frame->getContents());
+
+        $closeFn = $this->_close;
+        $closeFn($code, $reason);
+
         $this->_stream->end();
     }
 }
