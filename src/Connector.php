@@ -29,6 +29,12 @@ class Connector {
         $this->_negotiator      = new ClientNegotiator;
     }
 
+    /**
+     * @param string $url
+     * @param array  $subProtocols
+     * @param array  $headers
+     * @return \React\Promise\PromiseInterface
+     */
     public function __invoke($url, array $subProtocols = [], array $headers = []) {
         try {
             $request = $this->generateRequest($url, $subProtocols, $headers);
@@ -92,6 +98,12 @@ class Connector {
         });
     }
 
+    /**
+     * @param string $url
+     * @param array  $subProtocols
+     * @param array  $headers
+     * @return \Psr\Http\Message\RequestInterface
+     */
     protected function generateRequest($url, array $subProtocols, array $headers) {
         $uri = gPsr\uri_for($url);
 
