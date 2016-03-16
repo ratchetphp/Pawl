@@ -42,7 +42,7 @@ class WebSocket implements EventEmitterInterface {
      * @param \Psr\Http\Message\ResponseInterface $response
      * @param \Psr\Http\Message\RequestInterface  $request
      * @event message
-     * @event end
+     * @event pong
      * @event close
      * @event error
      */
