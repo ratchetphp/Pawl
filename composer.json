@@ -1,7 +1,7 @@
 {
     "name": "ratchet/pawl"
   , "description": "Asynchronous WebSocket client"
-  , "keywords": ["WebSocket", "client", "Ratchet", "async"]
+  , "keywords": ["WebSocket", "client", "Ratchet", "async", "websocket client"]
   , "license": "MIT"
   , "autoload": {
         "psr-4": {
