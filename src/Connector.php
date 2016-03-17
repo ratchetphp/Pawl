@@ -119,7 +119,7 @@ class Connector {
             $uri = $uri->withPort('wss' === $scheme ? 443 : 80);
         }
 
-        $headers += ['User-Agent' => 'Ratchet-Pawl/0.2'];
+        $headers += ['User-Agent' => 'Ratchet-Pawl/0.2.1'];
 
         $request = array_reduce(array_keys($headers), function($request, $header) use ($headers) {
             return $request->withHeader($header, $headers[$header]);
