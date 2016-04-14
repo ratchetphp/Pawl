@@ -112,7 +112,7 @@ class WebSocket implements EventEmitterInterface {
 
         $stream->on('close', function () {
             $close = $this->_close;
-            $close(1006, 'PHP Stream closed');
+            $close(Frame::CLOSE_ABNORMAL, 'Underlying connection closed');
         });
 
         $stream->on('error', function($error) {
