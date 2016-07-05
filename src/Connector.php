@@ -17,7 +17,7 @@ class Connector {
     protected $_secureConnector;
     protected $_negotiator;
 
-    public function __construct(LoopInterface $loop, Resolver $resolver = null) {
+    public function __construct(LoopInterface $loop, Resolver $resolver = null, array $secureContext = []) {
         if (null === $resolver) {
             $factory  = new DnsFactory();
             $resolver = $factory->create('8.8.8.8', $loop);
@@ -25,7 +25,7 @@ class Connector {
 
         $this->_loop            = $loop;
         $this->_connector       = new SocketConnector($loop, $resolver);
-        $this->_secureConnector = new SecureConnector($this->_connector, $loop);
+        $this->_secureConnector = new SecureConnector($this->_connector, $loop, $secureContext);
         $this->_negotiator      = new ClientNegotiator;
     }
 
