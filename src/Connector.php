@@ -3,9 +3,7 @@ namespace Ratchet\Client;
 use Ratchet\RFC6455\Handshake\ClientNegotiator;
 use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
-use React\Socket\SecureConnector;
-use React\Dns\Resolver\Resolver;
-use React\Dns\Resolver\Factory as DnsFactory;
+use React\Socket\ConnectorInterface;
 use React\Promise\Deferred;
 use React\Promise\RejectedPromise;
 use GuzzleHttp\Psr7 as gPsr;
@@ -16,16 +14,14 @@ class Connector {
     protected $_secureConnector;
     protected $_negotiator;
 
-    public function __construct(LoopInterface $loop, Resolver $resolver = null, array $secureContext = []) {
-        if (null === $resolver) {
-            $factory  = new DnsFactory();
-            $resolver = $factory->create('8.8.8.8', $loop);
+    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null) {
+        if (null === $connector) {
+            $connector = new \React\Socket\Connector($loop);
         }
 
-        $this->_loop            = $loop;
-        $this->_connector       = new \React\Socket\Connector($loop, ['dns' => $resolver]);
-        $this->_secureConnector = new SecureConnector($this->_connector, $loop, $secureContext);
-        $this->_negotiator      = new ClientNegotiator;
+        $this->_loop       = $loop;
+        $this->_connector  = $connector;
+        $this->_negotiator = new ClientNegotiator;
     }
 
     /**
@@ -41,9 +37,10 @@ class Connector {
         } catch (\Exception $e) {
             return new RejectedPromise($e);
         }
-        $connector = 'wss' === substr($url, 0, 3) ? $this->_secureConnector : $this->_connector;
+        $secure = 'wss' === substr($url, 0, 3);
+        $connector = $this->_connector;
 
-        $port = $uri->getPort() ?: 80;
+        $port = $uri->getPort() ?: ($secure ? 443 : 80);
 
         $uriString = $uri->getHost() . ':' . $port;
 
