@@ -4,7 +4,6 @@ use PHPUnit\Framework\TestCase;
 use Ratchet\Client\Connector;
 use React\EventLoop\Factory;
 use React\Promise\RejectedPromise;
-use React\Socket\ConnectorInterface as ReactConnector;
 
 class ConnectorTest extends TestCase
 {
@@ -18,13 +17,12 @@ class ConnectorTest extends TestCase
     }
 
     /**
-     * @requires PHP 5.5
      * @dataProvider uriDataProvider
      */
     public function testSecureConnectionUsesTlsScheme($uri, $expectedConnectorUri) {
         $loop = Factory::create();
 
-        $connector = $this->getMock(ReactConnector::class);
+        $connector = $this->getMock('React\Socket\ConnectorInterface');
 
         $connector->expects($this->once())
             ->method('connect')
