@@ -2,9 +2,8 @@
 namespace Ratchet\Client;
 use Ratchet\RFC6455\Handshake\ClientNegotiator;
 use React\EventLoop\LoopInterface;
-use React\Stream\DuplexStreamInterface;
-use React\SocketClient\Connector as SocketConnector;
-use React\SocketClient\SecureConnector;
+use React\Socket\ConnectionInterface;
+use React\Socket\SecureConnector;
 use React\Dns\Resolver\Resolver;
 use React\Dns\Resolver\Factory as DnsFactory;
 use React\Promise\Deferred;
@@ -24,7 +23,7 @@ class Connector {
         }
 
         $this->_loop            = $loop;
-        $this->_connector       = new SocketConnector($loop, $resolver);
+        $this->_connector       = new \React\Socket\Connector($loop, ['dns' => $resolver]);
         $this->_secureConnector = new SecureConnector($this->_connector, $loop, $secureContext);
         $this->_negotiator      = new ClientNegotiator;
     }
@@ -46,12 +45,16 @@ class Connector {
 
         $port = $uri->getPort() ?: 80;
 
-        return $connector->create($uri->getHost(), $port)->then(function(DuplexStreamInterface $stream) use ($request, $subProtocols) {
+        $uriString = $uri->getHost() . ':' . $port;
+
+        return $connector->connect($uriString)->then(function(ConnectionInterface $conn) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
 
             $earlyClose = function() use ($futureWsConn) {
                 $futureWsConn->reject(new \RuntimeException('Connection closed before handshake'));
             };
+
+            $stream = $conn;
 
             $stream->on('close', $earlyClose);
             $futureWsConn->promise()->then(function() use ($stream, $earlyClose) {
@@ -59,7 +62,7 @@ class Connector {
             });
 
             $buffer = '';
-            $headerParser = function($data, DuplexStreamInterface $stream) use (&$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
+            $headerParser = function($data) use ($stream, &$headerParser, &$buffer, $futureWsConn, $request, $subProtocols) {
                 $buffer .= $data;
                 if (false == strpos($buffer, "\r\n\r\n")) {
                     return;

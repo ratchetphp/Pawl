@@ -11,10 +11,11 @@
     }
   , "require": {
         "php": ">=5.4"
-      , "react/socket-client": "^0.5"
-      , "ratchet/rfc6455": "^0.2.1"
+      , "react/socket": "^1.0 || ^0.8 || ^0.7"
+      , "evenement/evenement": "^3.0 || ^2.0"
+      , "ratchet/rfc6455": "^0.2.2"
     }
   , "suggest": {
-        "reactivex/rxphp": "~1.1"
+        "reactivex/rxphp": "~2.0"
     }
 }
