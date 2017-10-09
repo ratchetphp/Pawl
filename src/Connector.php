@@ -42,7 +42,9 @@ class Connector {
 
         $port = $uri->getPort() ?: ($secure ? 443 : 80);
 
-        $uriString = $uri->getHost() . ':' . $port;
+        $scheme = $secure ? 'tls' : 'tcp';
+
+        $uriString = $scheme . '://' . $uri->getHost() . ':' . $port;
 
         return $connector->connect($uriString)->then(function(ConnectionInterface $conn) use ($request, $subProtocols) {
             $futureWsConn = new Deferred;
