@@ -17,7 +17,9 @@ class Connector {
 
     public function __construct(LoopInterface $loop, ConnectorInterface $connector = null) {
         if (null === $connector) {
-            $connector = new \React\Socket\Connector($loop);
+            $connector = new \React\Socket\Connector($loop, [
+                'timeout' => 20
+            ]);
         }
 
         $this->_loop       = $loop;

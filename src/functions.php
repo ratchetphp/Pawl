@@ -13,9 +13,7 @@ use React\EventLoop\Factory as ReactFactory;
 function connect($url, array $subProtocols = [], $headers = [], LoopInterface $loop = null) {
     $loop = $loop ?: ReactFactory::create();
 
-    $connector = new Connector($loop, new \React\Socket\Connector($loop, [
-        'timeout' => 20
-    ]));
+    $connector = new Connector($loop);
     $connection = $connector($url, $subProtocols, $headers);
 
     register_shutdown_function(function() use ($loop) {
