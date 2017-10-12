@@ -6,6 +6,7 @@ use React\Socket\ConnectionInterface;
 use React\Socket\ConnectorInterface;
 use React\Promise\Deferred;
 use React\Promise\RejectedPromise;
+use Psr\Http\Message\RequestInterface;
 use GuzzleHttp\Psr7 as gPsr;
 
 class Connector {
@@ -104,6 +105,7 @@ class Connector {
      * @param string $url
      * @param array  $subProtocols
      * @param array  $headers
+     * @throws \InvalidArgumentException
      * @return \Psr\Http\Message\RequestInterface
      */
     protected function generateRequest($url, array $subProtocols, array $headers) {
@@ -121,9 +123,9 @@ class Connector {
             $uri = $uri->withPort('wss' === $scheme ? 443 : 80);
         }
 
-        $headers += ['User-Agent' => 'Ratchet-Pawl/0.2.3'];
+        $headers += ['User-Agent' => 'Ratchet-Pawl/0.3'];
 
-        $request = array_reduce(array_keys($headers), function($request, $header) use ($headers) {
+        $request = array_reduce(array_keys($headers), function(RequestInterface $request, $header) use ($headers) {
             return $request->withHeader($header, $headers[$header]);
         }, $this->_negotiator->generateRequest($uri));
 

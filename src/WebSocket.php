@@ -27,7 +27,7 @@ class WebSocket implements EventEmitterInterface {
     public $response;
 
     /**
-     * @var \React\Stream\Stream
+     * @var \React\Stream\DuplexStreamInterface
      */
     protected $_stream;
 

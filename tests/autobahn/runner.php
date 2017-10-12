@@ -4,7 +4,7 @@ use React\Promise\Deferred;
 
     require __DIR__ . '/../../vendor/autoload.php';
 
-    define('AGENT', 'Pawl/0.2.3');
+    define('AGENT', 'Pawl/0.3');
 
     $loop = React\EventLoop\Factory::create();
 
