@@ -8,7 +8,7 @@ use React\EventLoop\Factory as ReactFactory;
  * @param array              $subProtocols
  * @param array              $headers
  * @param LoopInterface|null $loop
- * @return \React\Promise\PromiseInterface
+ * @return \React\Promise\PromiseInterface<\Ratchet\Client\WebSocket>
  */
 function connect($url, array $subProtocols = [], $headers = [], LoopInterface $loop = null) {
     $loop = $loop ?: ReactFactory::create();

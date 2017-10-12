@@ -1,6 +1,7 @@
 # Pawl
 
 [![Autobahn Testsuite](https://img.shields.io/badge/Autobahn-passing-brightgreen.svg)](http://socketo.me/reports/pawl/index.html)
+[![Build Status](https://travis-ci.org/ratchetphp/Pawl.svg?branch=master)](https://travis-ci.org/ratchetphp/Pawl)
 
 An asynchronous WebSocket client in PHP
 
@@ -59,7 +60,11 @@ A more in-depth example using explicit interfaces: Requesting sub-protocols, and
     require __DIR__ . '/vendor/autoload.php';
 
     $loop = React\EventLoop\Factory::create();
-    $connector = new Ratchet\Client\Connector($loop);
+    $reactConnector = new React\Socket\Connector($loop, [
+        'dns' => '8.8.8.8',
+        'timeout' => 10
+    ]);
+    $connector = new Ratchet\Client\Connector($loop, $reactConnector);
 
     $connector('ws://127.0.0.1:9000', ['protocol1', 'subprotocol2'], ['Origin' => 'http://localhost'])
     ->then(function(Ratchet\Client\WebSocket $conn) {

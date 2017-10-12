@@ -2,7 +2,7 @@
 namespace Ratchet\Client;
 use Evenement\EventEmitterTrait;
 use Evenement\EventEmitterInterface;
-use React\Stream\DuplexStreamInterface;
+use React\Socket\ConnectionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Ratchet\RFC6455\Messaging\MessageBuffer;
@@ -27,7 +27,7 @@ class WebSocket implements EventEmitterInterface {
     public $response;
 
     /**
-     * @var \React\Stream\Stream
+     * @var \React\Socket\ConnectionInterface
      */
     protected $_stream;
 
@@ -38,7 +38,7 @@ class WebSocket implements EventEmitterInterface {
 
     /**
      * WebSocket constructor.
-     * @param \React\Stream\DuplexStreamInterface $stream
+     * @param \React\Socket\ConnectionInterface $stream
      * @param \Psr\Http\Message\ResponseInterface $response
      * @param \Psr\Http\Message\RequestInterface  $request
      * @event message
@@ -46,7 +46,7 @@ class WebSocket implements EventEmitterInterface {
      * @event close
      * @event error
      */
-    public function __construct(DuplexStreamInterface $stream, ResponseInterface $response, RequestInterface $request) {
+    public function __construct(ConnectionInterface $stream, ResponseInterface $response, RequestInterface $request) {
         $this->_stream  = $stream;
         $this->response = $response;
         $this->request  = $request;
@@ -102,13 +102,6 @@ class WebSocket implements EventEmitterInterface {
         );
 
         $stream->on('data', [$streamer, 'onData']);
-
-        $stream->on('end', function(DuplexStreamInterface $stream) {
-            if (is_resource($stream->stream)) {
-                stream_socket_shutdown($stream->stream, STREAM_SHUT_RDWR);
-                stream_set_blocking($stream->stream, false);
-            }
-        });
 
         $stream->on('close', function () {
             $close = $this->_close;
