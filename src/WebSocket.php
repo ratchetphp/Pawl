@@ -130,6 +130,7 @@ class WebSocket implements EventEmitterInterface {
 
     public function close($code = 1000, $reason = '') {
         $frame = new Frame(pack('n', $code) . $reason, true, Frame::OP_CLOSE);
+        $frame->maskPayload();
         $this->_stream->write($frame->getContents());
 
         $closeFn = $this->_close;
