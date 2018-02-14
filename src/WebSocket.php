@@ -42,6 +42,7 @@ class WebSocket implements EventEmitterInterface {
      * @param \Psr\Http\Message\ResponseInterface $response
      * @param \Psr\Http\Message\RequestInterface  $request
      * @event message
+     * @event ping
      * @event pong
      * @event close
      * @event error
@@ -88,6 +89,7 @@ class WebSocket implements EventEmitterInterface {
 
                         return $this->_stream->end($streamer->newFrame($frame->getPayload(), true, Frame::OP_CLOSE)->maskPayload()->getContents());
                     case Frame::OP_PING:
+                        $this->emit('ping', [$frame, $this]);
                         return $this->send($streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
                     case Frame::OP_PONG:
                         return $this->emit('pong', [$frame, $this]);
