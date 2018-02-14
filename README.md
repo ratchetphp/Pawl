@@ -67,7 +67,7 @@ A more in-depth example using explicit interfaces: Requesting sub-protocols, and
     $connector = new Ratchet\Client\Connector($loop, $reactConnector);
 
     $connector('ws://127.0.0.1:9000', ['protocol1', 'subprotocol2'], ['Origin' => 'http://localhost'])
-    ->then(function(Ratchet\Client\WebSocket $conn) {
+    ->then(function(Ratchet\Client\WebSocket $conn) use ($loop) {
         $conn->on('message', function(\Ratchet\RFC6455\Messaging\MessageInterface $msg) use ($conn) {
             echo "Received: {$msg}\n";
             $conn->close();
@@ -77,6 +77,12 @@ A more in-depth example using explicit interfaces: Requesting sub-protocols, and
             echo "Connection closed ({$code} - {$reason})\n";
         });
 
+        // ping every 30 seconds
+        $loop->addPeriodicTimer(30, function() use($conn) {
+            echo "pinging... ";
+            $conn->send('ping');
+        });
+        
         $conn->send('Hello World!');
     }, function(\Exception $e) use ($loop) {
         echo "Could not connect: {$e->getMessage()}\n";
