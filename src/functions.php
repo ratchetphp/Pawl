@@ -2,6 +2,7 @@
 namespace Ratchet\Client;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\Factory as ReactFactory;
+use React\EventLoop\Timer\Timer;
 
 /**
  * @param string             $url
@@ -16,8 +17,16 @@ function connect($url, array $subProtocols = [], $headers = [], LoopInterface $l
     $connector = new Connector($loop);
     $connection = $connector($url, $subProtocols, $headers);
 
-    register_shutdown_function(function() use ($loop) {
-        $loop->run();
+    $runHasBeenCalled = false;
+
+    $loop->addTimer(Timer::MIN_INTERVAL, function () use (&$runHasBeenCalled) {
+        $runHasBeenCalled = true;
+    });
+
+    register_shutdown_function(function() use ($loop, &$runHasBeenCalled) {
+        if (!$runHasBeenCalled) {
+            $loop->run();
+        }
     });
 
     return $connection;
