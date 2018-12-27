@@ -139,5 +139,6 @@ class WebSocket implements EventEmitterInterface {
         $closeFn($code, $reason);
 
         $this->_stream->end();
+        $this->_stream->close();
     }
 }
