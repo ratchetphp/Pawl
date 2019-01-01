@@ -119,11 +119,7 @@ class Connector {
             throw new \InvalidArgumentException(sprintf('Cannot connect to invalid URL (%s)', $url));
         }
 
-        $uri = $uri->withScheme('HTTP');
-
-        if (!$uri->getPort()) {
-            $uri = $uri->withPort('wss' === $scheme ? 443 : 80);
-        }
+        $uri = $uri->withScheme('wss' === $scheme ? 'HTTPS' : 'HTTP');
 
         $headers += ['User-Agent' => 'Ratchet-Pawl/0.3'];
 
