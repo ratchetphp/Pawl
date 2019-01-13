@@ -49,9 +49,21 @@ class Connector {
 
         $uriString = $scheme . '://' . $uri->getHost() . ':' . $port;
 
-        return $connector->connect($uriString)->then(function(ConnectionInterface $conn) use ($request, $subProtocols) {
-            $futureWsConn = new Deferred;
+        $connecting = $connector->connect($uriString);
 
+        $futureWsConn = new Deferred(function ($_, $reject) use ($url, $connecting) {
+            $reject(new \RuntimeException(
+                'Connection to ' . $url . ' cancelled during handshake'
+            ));
+
+            // either close active connection or cancel pending connection attempt
+            $connecting->then(function (ConnectionInterface $connection) {
+                $connection->close();
+            });
+            $connecting->cancel();
+        });
+
+        $connecting->then(function(ConnectionInterface $conn) use ($request, $subProtocols, $futureWsConn) {
             $earlyClose = function() use ($futureWsConn) {
                 $futureWsConn->reject(new \RuntimeException('Connection closed before handshake'));
             };
@@ -98,9 +110,9 @@ class Connector {
 
             $stream->on('data', $headerParser);
             $stream->write(gPsr\str($request));
+        }, array($futureWsConn, 'reject'));
 
-            return $futureWsConn->promise();
-        });
+        return $futureWsConn->promise();
     }
 
     /**
