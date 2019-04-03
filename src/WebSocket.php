@@ -27,6 +27,12 @@ class WebSocket implements EventEmitterInterface {
     public $response;
 
     /**
+     * Set to false to not mask payloads
+     * @var Boolean
+     */
+    public $isMaskRequired = true;
+
+    /**
      * @var \React\Socket\ConnectionInterface
      */
     protected $_stream;
@@ -87,7 +93,11 @@ class WebSocket implements EventEmitterInterface {
                         $closeFn = $this->_close;
                         $closeFn($code, $reason);
 
-                        return $this->_stream->end($streamer->newFrame($frame->getPayload(), true, Frame::OP_CLOSE)->maskPayload()->getContents());
+                        $frame = $streamer->newFrame($frame->getPayload(), true, Frame::OP_CLOSE);
+                        if ($this->isMaskRequired) {
+                            $frame->maskPayload();
+                        }
+                        return $this->_stream->end($frame->getContents());
                     case Frame::OP_PING:
                         $this->emit('ping', [$frame, $this]);
                         return $this->send($streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
@@ -117,14 +127,18 @@ class WebSocket implements EventEmitterInterface {
 
     public function send($msg) {
         if ($msg instanceof MessageInterface) {
-            foreach ($msg as $frame) {
-                $frame->maskPayload();
+            if ($this->isMaskRequired) {
+                foreach ($msg as $frame) {
+                    $frame->maskPayload();
+                }
             }
         } else {
             if (!($msg instanceof Frame)) {
                 $msg = new Frame($msg);
             }
-            $msg->maskPayload();
+            if ($this->isMaskRequired) {
+                $msg->maskPayload();
+            }
         }
 
         return $this->_stream->write($msg->getContents());
