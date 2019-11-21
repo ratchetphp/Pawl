@@ -15,7 +15,7 @@ Pawl as a standalone app: Connect to an echo server, send a message, display out
 
     require __DIR__ . '/vendor/autoload.php';
 
-    \Ratchet\Client\connect('ws://echo.socketo.me:9000')->then(function($conn) {
+    \Ratchet\Client\connect('wss://echo.websocket.org:443')->then(function($conn) {
         $conn->on('message', function($msg) use ($conn) {
             echo "Received: {$msg}\n";
             $conn->close();
