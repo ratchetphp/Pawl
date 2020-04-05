@@ -113,6 +113,10 @@ class WebSocket implements EventEmitterInterface {
         $stream->on('error', function($error) {
             $this->emit('error', [$error, $this]);
         });
+
+        $stream->on('drain', function () {
+            $this->emit('drain');
+        });
     }
 
     public function send($msg) {
