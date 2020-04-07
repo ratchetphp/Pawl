@@ -144,4 +144,14 @@ class WebSocket implements EventEmitterInterface {
 
         $this->_stream->end();
     }
+
+    public function pause()
+    {
+        $this->_stream->pause();
+    }
+
+    public function resume()
+    {
+        $this->_stream->resume();
+    }
 }
