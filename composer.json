@@ -13,7 +13,7 @@
         "php": ">=5.4"
       , "react/socket": "^1.0 || ^0.8 || ^0.7"
       , "evenement/evenement": "^3.0 || ^2.0"
-      , "ratchet/rfc6455": "^0.2.3"
+      , "ratchet/rfc6455": "^0.3"
     }
   , "require-dev": {
         "phpunit/phpunit": "~4.8"
