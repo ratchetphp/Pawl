@@ -1,6 +1,7 @@
 <?php
 namespace Ratchet\Client;
 use Ratchet\RFC6455\Handshake\ClientNegotiator;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
 use React\Socket\ConnectorInterface;
@@ -15,14 +16,15 @@ class Connector {
     protected $_secureConnector;
     protected $_negotiator;
 
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null) {
+    public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null) {
+        $this->_loop = $loop ?: Loop::get();
+
         if (null === $connector) {
-            $connector = new \React\Socket\Connector($loop, [
+            $connector = new \React\Socket\Connector($this->_loop, [
                 'timeout' => 20
             ]);
         }
 
-        $this->_loop       = $loop;
         $this->_connector  = $connector;
         $this->_negotiator = new ClientNegotiator;
     }
