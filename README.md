@@ -1,7 +1,7 @@
 # Pawl
 
 [![Autobahn Testsuite](https://img.shields.io/badge/Autobahn-passing-brightgreen.svg)](http://socketo.me/reports/pawl/index.html)
-[![Build Status](https://travis-ci.org/ratchetphp/Pawl.svg?branch=master)](https://travis-ci.org/ratchetphp/Pawl)
+[![CI status](https://github.com/ratchetphp/Pawl/workflows/CI/badge.svg)](https://github.com/ratchetphp/Pawl/actions)
 
 An asynchronous WebSocket client in PHP
 
