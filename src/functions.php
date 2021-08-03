@@ -5,10 +5,10 @@ use React\EventLoop\Factory as ReactFactory;
 use React\EventLoop\Timer\Timer;
 
 /**
- * @param string             $url
- * @param array              $subProtocols
- * @param array              $headers
- * @param LoopInterface|null $loop
+ * @param string|\Psr\Http\Message\UriInterface $url
+ * @param array                                 $subProtocols
+ * @param array                                 $headers
+ * @param LoopInterface|null                    $loop
  * @return \React\Promise\PromiseInterface<\Ratchet\Client\WebSocket>
  */
 function connect($url, array $subProtocols = [], $headers = [], LoopInterface $loop = null) {

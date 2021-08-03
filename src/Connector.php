@@ -28,9 +28,9 @@ class Connector {
     }
 
     /**
-     * @param string $url
-     * @param array  $subProtocols
-     * @param array  $headers
+     * @param string|\Psr\Http\Message\UriInterface $url
+     * @param array                                 $subProtocols
+     * @param array                                 $headers
      * @return \React\Promise\PromiseInterface
      */
     public function __invoke($url, array $subProtocols = [], array $headers = []) {
@@ -116,9 +116,9 @@ class Connector {
     }
 
     /**
-     * @param string $url
-     * @param array  $subProtocols
-     * @param array  $headers
+     * @param string|\Psr\Http\Message\UriInterface $url
+     * @param array                                 $subProtocols
+     * @param array                                 $headers
      * @throws \InvalidArgumentException
      * @return \Psr\Http\Message\RequestInterface
      */
