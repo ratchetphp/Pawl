@@ -12,6 +12,7 @@
   , "require": {
         "php": ">=5.4"
       , "evenement/evenement": "^3.0 || ^2.0"
+      , "guzzlehttp/psr7": "^2.0 || ^1.7"
       , "ratchet/rfc6455": "^0.3"
       , "react/socket": "^1.9"
     }
