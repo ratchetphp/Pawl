@@ -20,9 +20,9 @@ class Connector {
         $this->_loop = $loop ?: Loop::get();
 
         if (null === $connector) {
-            $connector = new \React\Socket\Connector($this->_loop, [
+            $connector = new \React\Socket\Connector([
                 'timeout' => 20
-            ]);
+            ], $this->_loop);
         }
 
         $this->_connector  = $connector;
