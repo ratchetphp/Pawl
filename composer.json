@@ -16,7 +16,7 @@
       , "ratchet/rfc6455": "^0.3"
     }
   , "require-dev": {
-        "phpunit/phpunit": "~4.8"
+        "phpunit/phpunit": "^9.3 || ^5.7 || ^4.8"
     }
   , "suggest": {
         "reactivex/rxphp": "~2.0"
