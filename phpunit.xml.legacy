@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- PHPUnit configuration file with new format for PHPUnit 9.3+ -->
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-        xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
+<!-- PHPUnit configuration file with old format for PHPUnit 9.2 or older -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/4.8/phpunit.xsd"
         backupGlobals="false"
         backupStaticAttributes="false"
         bootstrap="vendor/autoload.php"
@@ -14,9 +14,9 @@
             <directory>./tests/</directory>
         </testsuite>
     </testsuites>
-    <coverage>
-        <include>
+    <filter>
+        <whitelist>
             <directory>./src/</directory>
-        </include>
-    </coverage>
+        </whitelist>
+    </filter>
 </phpunit>
