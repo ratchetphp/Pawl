@@ -23,7 +23,7 @@ class ConnectorTest extends TestCase
     public function testSecureConnectionUsesTlsScheme($uri, $expectedConnectorUri) {
         $loop = Factory::create();
 
-        $connector = $this->getMock('React\Socket\ConnectorInterface');
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
 
         $connector->expects($this->once())
             ->method('connect')
