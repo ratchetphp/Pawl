@@ -13,7 +13,6 @@ use GuzzleHttp\Psr7 as gPsr;
 class Connector {
     protected $_loop;
     protected $_connector;
-    protected $_secureConnector;
     protected $_negotiator;
 
     public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null) {
@@ -135,7 +134,7 @@ class Connector {
 
         $uri = $uri->withScheme('wss' === $scheme ? 'HTTPS' : 'HTTP');
 
-        $headers += ['User-Agent' => 'Ratchet-Pawl/0.3'];
+        $headers += ['User-Agent' => 'Ratchet-Pawl/0.4'];
 
         $request = array_reduce(array_keys($headers), function(RequestInterface $request, $header) use ($headers) {
             return $request->withHeader($header, $headers[$header]);
