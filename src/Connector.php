@@ -134,7 +134,7 @@ class Connector {
 
         $uri = $uri->withScheme('wss' === $scheme ? 'HTTPS' : 'HTTP');
 
-        $headers += ['User-Agent' => 'Ratchet-Pawl/0.4'];
+        $headers += ['User-Agent' => 'Ratchet-Pawl/0.4.1'];
 
         $request = array_reduce(array_keys($headers), function(RequestInterface $request, $header) use ($headers) {
             return $request->withHeader($header, $headers[$header]);
