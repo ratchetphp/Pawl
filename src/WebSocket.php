@@ -2,6 +2,7 @@
 namespace Ratchet\Client;
 use Evenement\EventEmitterTrait;
 use Evenement\EventEmitterInterface;
+use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -35,6 +36,10 @@ class WebSocket implements EventEmitterInterface {
      * @var \Closure
      */
     protected $_close;
+    /**
+     * @var callable
+     */
+    private $pongReceiver;
 
     /**
      * WebSocket constructor.
@@ -92,6 +97,10 @@ class WebSocket implements EventEmitterInterface {
                         $this->emit('ping', [$frame, $this]);
                         return $this->send($streamer->newFrame($frame->getPayload(), true, Frame::OP_PONG));
                     case Frame::OP_PONG:
+                        if ($this->pongReceiver) {
+                            $pongReceiver = $this->pongReceiver;
+                            $pongReceiver($frame, $this);
+                        }
                         return $this->emit('pong', [$frame, $this]);
                     default:
                         return $this->close(Frame::CLOSE_PROTOCOL);
@@ -153,5 +162,42 @@ class WebSocket implements EventEmitterInterface {
     public function resume()
     {
         $this->_stream->resume();
+    }
+
+    /**
+     * Add a timer to ping the server at a regular interval.
+     *
+     * For connections that mostly receive data, it can take a lot of time before the connection is determined to be
+     * silently gone (e.g. due to connectivity issues). With this method, this check can be made easier.
+     *
+     * A ping frame is sent at the interval, and if the corresponding pong is not received by the time the next ping
+     * is scheduled for, the connection is deemed dead, and is closed.
+     *
+     * @param LoopInterface $loop The loop to tie the timer to.
+     * @param int|float $interval The interval at which to trigger the timer, in seconds.
+     * @return \React\EventLoop\TimerInterface The periodic timer that is tied to the loop given.
+     * This allows the caller to cancel the timer later.
+     */
+    public function enableKeepAlive(LoopInterface $loop, $interval = 30)
+    {
+        $lastPing = new Frame(uniqid(), true, Frame::OP_PING);
+        $isAlive = true;
+
+        $this->pongReceiver = static function(FrameInterface $frame, $wsConn) use (&$isAlive, &$lastPing) {
+            if ($frame->getPayload() === $lastPing->getPayload()) {
+                $isAlive = true;
+            }
+        };
+        return $loop->addPeriodicTimer($interval, function() use (&$isAlive, &$lastPing) {
+            if (!$isAlive) {
+                $this->close(Frame::CLOSE_ABNORMAL);
+            }
+            $isAlive = true;
+
+            $lastPing = new Frame(uniqid(), true, Frame::OP_PING);
+            $this->send($lastPing);
+
+            $isAlive = false;
+        });
     }
 }
