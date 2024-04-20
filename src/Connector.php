@@ -74,6 +74,8 @@ class Connector {
             $stream->on('close', $earlyClose);
             $futureWsConn->promise()->then(function() use ($stream, $earlyClose) {
                 $stream->removeListener('close', $earlyClose);
+            }, function (\Exception $exception) use ($futureWsConn) {
+                $futureWsConn->reject($exception);
             });
 
             $buffer = '';
