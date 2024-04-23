@@ -118,6 +118,10 @@ class WebSocket implements EventEmitterInterface {
         $stream->on('error', function($error) {
             $this->emit('error', [$error, $this]);
         });
+
+        $stream->on('drain', function () {
+            $this->emit('drain');
+        });
     }
 
     public function send($msg) {
@@ -144,5 +148,15 @@ class WebSocket implements EventEmitterInterface {
         $closeFn($code, $reason);
 
         $this->_stream->end();
+    }
+
+    public function pause()
+    {
+        $this->_stream->pause();
+    }
+
+    public function resume()
+    {
+        $this->_stream->resume();
     }
 }
