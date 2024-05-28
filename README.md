@@ -1,5 +1,11 @@
 # Pawl
 
+## Fork
+
+This is a fork. The original source doesn't seem to be getting updates anymore.
+
+Don't count on this repo working.
+
 [![Autobahn Testsuite](https://img.shields.io/badge/Autobahn-passing-brightgreen.svg)](http://socketo.me/reports/pawl/index.html)
 [![CI status](https://github.com/ratchetphp/Pawl/workflows/CI/badge.svg)](https://github.com/ratchetphp/Pawl/actions)
 
