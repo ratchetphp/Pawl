@@ -3,8 +3,9 @@
 use PHPUnit\Framework\TestCase;
 use Ratchet\Client\Connector;
 use React\EventLoop\Loop;
-use React\Promise\RejectedPromise;
 use React\Promise\Promise;
+
+use function React\Promise\reject;
 
 class ConnectorTest extends TestCase
 {
@@ -36,17 +37,21 @@ class ConnectorTest extends TestCase
 
         $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
 
+        $exception = new Exception('');
+
         $connector->expects($this->once())
             ->method('connect')
             ->with($this->callback(function ($uri) use ($expectedConnectorUri) {
                 return $uri === $expectedConnectorUri;
             }))
             // reject the promise so that we don't have to mock a connection here
-            ->willReturn(new RejectedPromise(new Exception('')));
+            ->willReturn(reject($exception));
 
         $pawlConnector = new Connector($loop, $connector);
 
-        $pawlConnector($uri);
+        $pawlConnector($uri)->catch(function (Throwable $e) {
+            // This is caused by the exception returned by the mock
+        });
     }
 
     public function testConnectorRejectsWhenUnderlyingSocketConnectorRejects()
@@ -104,14 +109,15 @@ class ConnectorTest extends TestCase
 
         $pawlConnector = new Connector($loop, $connector);
 
+        $message = null;
         $promise = $pawlConnector('ws://localhost');
 
         $promise->cancel();
 
-        $message = null;
-        $promise->then(null, function ($reason) use (&$message) {
-            $message = $reason->getMessage();
+        $promise->catch(function (Throwable $e) use (&$message) {
+            $message = $e->getMessage();
         });
+
         $this->assertEquals('Connection to ws://localhost cancelled during handshake', $message);
     }
 }
