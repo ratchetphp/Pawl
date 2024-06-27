@@ -1,0 +1,28 @@
+name: Autobahn
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  Autobahn:
+    name: Autobahn Tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        php:
+          - 8.3
+    steps:
+      - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: xdebug
+      - run: composer install
+      - run: ./run-docker.sh &
+        working-directory: ./tests/autobahn
+      - run: php runner.php
+      working-directory: ./tests/autobahn
+      - run: php validate.php
+      working-directory: ./tests/autobahn
