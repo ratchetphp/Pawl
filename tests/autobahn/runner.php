@@ -38,7 +38,7 @@ use React\Promise\Deferred;
                 $i++;
 
                 if ($i > (int)$numOfCases->getPayload()) {
-                    $allCases->resolve();
+                    $allCases->resolve(null);
 
                     return;
                 }
