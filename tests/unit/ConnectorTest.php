@@ -3,7 +3,7 @@
 use PHPUnit\Framework\TestCase;
 use Ratchet\Client\Connector;
 use React\EventLoop\Loop;
-use React\Promise\RejectedPromise;
+use React\Promise\Internal\RejectedPromise;
 use React\Promise\Promise;
 
 class ConnectorTest extends TestCase
