@@ -6,7 +6,7 @@ use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface;
 use React\Socket\ConnectorInterface;
 use React\Promise\Deferred;
-use React\Promise\RejectedPromise;
+use React\Promise\Internal\RejectedPromise;
 use Psr\Http\Message\RequestInterface;
 use GuzzleHttp\Psr7 as gPsr;
 
