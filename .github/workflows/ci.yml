@@ -29,7 +29,7 @@ jobs:
       - name: Pull AutoBahn Docker Image
         run: docker pull crossbario/autobahn-testsuite
       - name: Start Autobahn TestSuite Server
-        run: docker run -d --name fuzzingserver --rm -it -v tests/autobahn:/config -v tests/autobahn/reports:/reports --name fuzzingclient -p 9001:9001 crossbario/autobahn-testsuite wstest -m fuzzingserver -s /config/fuzzingserver.json
+        run: docker run -d --name fuzzingserver --rm -it -v ${{ github.workspace }}/tests/autobahn:/config -v ${{ github.workspace }}/tests/autobahn/reports:/reports --name fuzzingclient -p 9001:9001 crossbario/autobahn-testsuite wstest -m fuzzingserver -s /config/fuzzingserver.json
       - name: Wait for Autobahn TestSuite Server to start
         run: |
           for i in {1..30}; do
