@@ -1,10 +1,12 @@
 <?php
 use Ratchet\Client\WebSocket;
 use React\Promise\Deferred;
+use function React\Promise\reject;
+use function React\Promise\resolve;
 
-    require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
-    define('AGENT', 'Pawl/0.4');
+    define('AGENT', 'Pawl/0.5.0');
 
     $connFactory = function() {
         $connector = new Ratchet\Client\Connector();
@@ -38,7 +40,7 @@ use React\Promise\Deferred;
                 $i++;
 
                 if ($i > (int)$numOfCases->getPayload()) {
-                    $allCases->resolve();
+                    $allCases->resolve(null);
 
                     return;
                 }
@@ -58,10 +60,19 @@ use React\Promise\Deferred;
 
             return $allCases->promise();
         })->then(function() use ($connector) {
-            $connector('/updateReports?agent=' . AGENT)->then(function(WebSocket $conn) {
+            $connector('/updateReports?agent=' . AGENT . '&shutdownOnComplete=true')->then(function(WebSocket $conn) {
                 echo "\nDone!\n";
                 $conn->on('close', function () {
                     \React\EventLoop\Loop::stop();
                 });
-            });
+            })
+                // This catch is here because we will get a "Connection closed before handshake" when we use shutdownOnComplete
+                ->catch(function (Throwable $t) {
+                    if ($t->getMessage() === 'Connection closed before handshake') {
+                        echo "Got expected error: {$t->getMessage()}\n";
+                        return resolve(null);
+                    }
+                    echo "Error: {$t->getMessage()}\n";
+                    return reject($t);
+                });
         });

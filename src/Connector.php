@@ -25,7 +25,7 @@ class Connector {
         }
 
         $this->_connector  = $connector;
-        $this->_negotiator = new ClientNegotiator;
+        $this->_negotiator = new ClientNegotiator(new gPsr\HttpFactory());
     }
 
     /**
@@ -107,7 +107,7 @@ class Connector {
                 $futureWsConn->resolve(new WebSocket($stream, $response, $request));
 
                 $futureWsConn->promise()->then(function(WebSocket $conn) use ($stream) {
-                    $stream->emit('data', [$conn->response->getBody(), $stream]);
+                    $stream->emit('data', [$conn->response->getBody()->getContents(), $stream]);
                 });
             };
 

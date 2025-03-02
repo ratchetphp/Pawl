@@ -3,7 +3,6 @@
 use PHPUnit\Framework\TestCase;
 use Ratchet\Client\Connector;
 use React\EventLoop\Loop;
-use React\Promise\RejectedPromise;
 use React\Promise\Promise;
 
 class ConnectorTest extends TestCase
@@ -42,7 +41,7 @@ class ConnectorTest extends TestCase
                 return $uri === $expectedConnectorUri;
             }))
             // reject the promise so that we don't have to mock a connection here
-            ->willReturn(new RejectedPromise(new Exception('')));
+            ->willReturn(\React\Promise\resolve($this->getMockBuilder(\React\Socket\ConnectionInterface::class)->getMock()));
 
         $pawlConnector = new Connector($loop, $connector);
 
