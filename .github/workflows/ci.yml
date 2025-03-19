@@ -3,45 +3,48 @@ name: CI
 on:
   push:
   pull_request:
-  workflow_dispatch:
 
 jobs:
   PHPUnit:
-    name: PHPUnit (PHP ${{ matrix.php }})
-    runs-on: ubuntu-20.04
+    name: PHPUnit (PHP ${{ matrix.php }}) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os:
+          - ubuntu-22.04
         php:
-          - 8.1
-          - 8.0
           - 7.4
-          - 7.3
-          - 7.2
-          - 7.1
-          - 7.0
-          - 5.6
-          - 5.5
-          - 5.4
+          - 8.0
+          - 8.1
+          - 8.2
+          - 8.3
+          - 8.4
     steps:
-      - uses: actions/checkout@v2
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: xdebug
-      - run: composer install
+      - name: Pull AutoBahn Docker Image
+        run: docker pull crossbario/autobahn-testsuite
+      - name: Start Autobahn TestSuite Server
+        run: docker run -d --name fuzzingserver --rm -it -v ${{ github.workspace }}/tests/autobahn:/config -v ${{ github.workspace }}/tests/autobahn/reports:/reports --name fuzzingclient -p 9001:9001 crossbario/autobahn-testsuite wstest -m fuzzingserver -s /config/fuzzingserver.json
+      - name: Wait for Autobahn TestSuite Server to start
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 9001; then
+              echo "Server is up!";
+              exit 0;
+            fi
+            echo "Waiting for server..."
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
+      - name: Install Composer Dependencies
+        run: composer install
+      - name: Run Autobahn TestSuite
+        run: php tests/autobahn/runner.php
       - run: vendor/bin/phpunit --coverage-text
-        if: ${{ matrix.php >= 7.3 }}
-      - run: vendor/bin/phpunit --coverage-text -c phpunit.xml.legacy
-        if: ${{ matrix.php < 7.3 }}
 
-  PHPUnit-hhvm:
-    name: PHPUnit (HHVM)
-    runs-on: ubuntu-18.04
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v2
-      - uses: azjezz/setup-hhvm@v1
-        with:
-          version: lts-3.30
-      - run: hhvm $(which composer) install
-      - run: hhvm vendor/bin/phpunit
