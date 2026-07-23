@@ -12,7 +12,9 @@ class RequestUriTest extends TestCase {
     protected static function getPrivateClassMethod($className, $methodName) {
         $class = new ReflectionClass($className);
         $method = $class->getMethod($methodName);
-        $method->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $method->setAccessible(true);
+        }
         return $method;
     }
 
