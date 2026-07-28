@@ -12,7 +12,9 @@ class ConnectorTest extends TestCase
         $factory = new Connector();
 
         $ref = new \ReflectionProperty($factory, '_loop');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $loop = $ref->getValue($factory);
 
         $this->assertInstanceOf('React\EventLoop\LoopInterface', $loop);
